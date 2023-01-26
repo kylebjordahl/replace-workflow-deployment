@@ -31,3 +31,4 @@ jobs:
           ref: ${{inputs.release_tag}}
           description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
           environment: ${{ inputs.environment }}
+          token: ${{ secrets.GITHUB_TOKEN }}

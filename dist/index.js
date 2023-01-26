@@ -39,19 +39,16 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const luxon_1 = __nccwpck_require__(8811);
 function run() {
-    var _a, _b;
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = {
                 environment: core.getInput('environment', { required: true }),
                 ref: core.getInput('ref', { required: true }),
                 description: core.getInput('description', { required: true }),
+                token: core.getInput('token', { required: true }),
             };
-            const ghToken = (_a = process.env.GH_TOKEN) !== null && _a !== void 0 ? _a : process.env.GITHUB_TOKEN;
-            if (!ghToken) {
-                throw Error('GitHub token required');
-            }
-            const octo = github.getOctokit(ghToken);
+            const octo = github.getOctokit(inputs.token);
             // get the deployment which was created recently with the same git ref as this run
             const currentRunRef = github.context.ref;
             const deployments = yield octo.rest.repos.listDeployments({
@@ -93,7 +90,7 @@ function run() {
                 owner: github.context.repo.owner,
                 repo: github.context.repo.repo,
                 deployment_id: newDeployment.id,
-                state: (_b = latestReplacedDeploymentStatus === null || latestReplacedDeploymentStatus === void 0 ? void 0 : latestReplacedDeploymentStatus.state) !== null && _b !== void 0 ? _b : 'success',
+                state: (_a = latestReplacedDeploymentStatus === null || latestReplacedDeploymentStatus === void 0 ? void 0 : latestReplacedDeploymentStatus.state) !== null && _a !== void 0 ? _a : 'success',
             });
             if (newDeploymentStatusUpdateResponse.status !== 201) {
                 throw Error('Failed to set new deployment status');

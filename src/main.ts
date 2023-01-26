@@ -9,13 +9,10 @@ async function run(): Promise<void> {
       environment: core.getInput('environment', {required: true}),
       ref: core.getInput('ref', {required: true}),
       description: core.getInput('description', {required: true}),
+      token: core.getInput('token', {required: true}),
     }
 
-    const ghToken = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN
-    if (!ghToken) {
-      throw Error('GitHub token required')
-    }
-    const octo = github.getOctokit(ghToken)
+    const octo = github.getOctokit(inputs.token)
 
     // get the deployment which was created recently with the same git ref as this run
     const currentRunRef = github.context.ref

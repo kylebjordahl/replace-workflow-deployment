@@ -11,6 +11,9 @@ inputs:
   description:
     required: true
     description: 'The description to display on the deployment (limited to 140 characters)'
+  token:
+    required: true
+    description: 'GitHub token with access to read and write deployments and deployment statuses'
 runs:
   using: 'node16'
   main: 'dist/index.js'
