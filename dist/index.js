@@ -35,6 +35,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const luxon_1 = __nccwpck_require__(8811);
@@ -57,6 +58,7 @@ function run() {
                 ref: currentRunRef,
                 environment: inputs.environment,
             });
+            core.debug(`Fetched ${deployments.data.length} deployments`);
             deployments.data.forEach(d => core.debug(`Found deployment [${d.id}(${d.updated_at}): ${d.description}]`));
             const replacedDeployment = deployments.data.slice(0, 1).shift();
             if (!replacedDeployment) {
@@ -74,12 +76,15 @@ function run() {
             const latestReplacedDeploymentStatus = replacedDeploymentStatuses.shift();
             core.info(`Replacing deployment ${replacedDeployment.id}: ${replacedDeployment.description}`);
             // create a new deployment for the target environment
+            // https://github.com/kylebjordahl/replace-workflow-deployment/actions/runs/4012266800/jobs/6890573893
+            const workflowUrl = `${github.context.serverUrl}/${github.context.repo.owner}/${github.context.repo.repo}/runs/${github.context.runId}`;
             const newDeploymentResponse = yield octo.rest.repos.createDeployment({
                 owner: github.context.repo.owner,
                 repo: github.context.repo.repo,
                 ref: inputs.ref,
                 description: inputs.description,
                 environment: replacedDeployment.environment,
+                auto_merge: false,
             });
             if (newDeploymentResponse.status !== 201) {
                 core.debug(`Create new deployment returned ${newDeploymentResponse.status}: ${newDeploymentResponse.data}`);
@@ -92,9 +97,29 @@ function run() {
                 repo: github.context.repo.repo,
                 deployment_id: newDeployment.id,
                 state: (_a = latestReplacedDeploymentStatus === null || latestReplacedDeploymentStatus === void 0 ? void 0 : latestReplacedDeploymentStatus.state) !== null && _a !== void 0 ? _a : 'success',
+                log_url: workflowUrl,
+                description: inputs.description,
+                auto_inactive: true,
             });
             if (newDeploymentStatusUpdateResponse.status !== 201) {
                 throw Error('Failed to set new deployment status');
+            }
+            const replacedDeploymentStatusUpdateResponse = yield octo.rest.repos.createDeploymentStatus({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                deployment_id: replacedDeployment.id,
+                state: 'inactive',
+            });
+            if (replacedDeploymentStatusUpdateResponse.status !== 201) {
+                throw Error('Failed to set replaced deployment status');
+            }
+            const deleteOldDeploymentResult = yield octo.rest.repos.deleteDeployment({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                deployment_id: replacedDeployment.id,
+            });
+            if (deleteOldDeploymentResult.status !== 204) {
+                throw Error(`Failed to delete old deployment [${replacedDeployment.id}]`);
             }
         }
         catch (error) {
@@ -103,6 +128,7 @@ function run() {
         }
     });
 }
+exports.run = run;
 run();
 
 
