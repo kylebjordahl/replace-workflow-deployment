@@ -1,11 +1,16 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Replace Workflow Deployment'
+description: 'Replace a deployment created by the current workflow with a new one.'
+author: 'kylebjordahl'
 inputs:
-  milliseconds: # change this
+  environment: # change this
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'The environment for the deployment'
+  ref: # change this
+    required: true
+    description: 'The ref to link the deployment to'
+  description:
+    required: true
+    description: 'The description to display on the deployment (limited to 140 characters)'
 runs:
   using: 'node16'
   main: 'dist/index.js'
