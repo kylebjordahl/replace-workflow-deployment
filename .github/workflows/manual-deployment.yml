@@ -7,7 +7,6 @@ on:
       release_tag:
         description: the tag of the release to deploy
         type: string
-        default: v0.1.0
         required: true
           
       environment:
@@ -35,4 +34,4 @@ jobs:
           ref: ${{inputs.release_tag}}
           description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
           environment: ${{ inputs.environment }}
-          token: ${{ secrets.KYLE_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
