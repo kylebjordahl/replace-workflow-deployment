@@ -4,7 +4,7 @@ import * as util from 'util'
 import * as path from 'path'
 import {expect, test} from '@jest/globals'
 
-test('Live fire test', async () => {
+test.skip('Live fire test', async () => {
   const tokenCmdOutput = await util.promisify(cp.exec)(`gh auth token`)
   process.env['INPUT_REF'] = `v0.1.1`
   process.env['INPUT_DESCRIPTION'] = 'Live fire test'
