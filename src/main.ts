@@ -15,11 +15,10 @@ export async function run(): Promise<void> {
     const octo = github.getOctokit(inputs.token)
 
     // get the deployment which was created recently with the same git ref as this run
-    const currentRunRef = github.context.ref
     const deployments = await octo.rest.repos.listDeployments({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      ref: currentRunRef,
+      sha: github.context.sha,
       environment: inputs.environment,
     })
 
