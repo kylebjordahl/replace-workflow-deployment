@@ -28,8 +28,6 @@ jobs:
   clean_up_deploy:
     runs-on: ubuntu-latest
     needs: [do_deploy]
-    permissions:
-      deployments: write
     steps:
       - uses: actions/checkout@v3
       - uses: ./
@@ -37,4 +35,4 @@ jobs:
           ref: ${{inputs.release_tag}}
           description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
           environment: ${{ inputs.environment }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.KYLE_GITHUB_TOKEN }}
