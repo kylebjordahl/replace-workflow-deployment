@@ -14,8 +14,7 @@ on:
         description: the environment to deploy to
         type: choice
         options:
-          - production-ohm
-          - beta-ohm
+          - production
         required: true
 
 
