@@ -54,7 +54,7 @@ jobs:
     steps:
 
       # be sure to replace with whatever version you'd like to pin to
-      - uses: kylebjordahl@replace-workflow-deployment@v1.0.0
+      - uses: kylebjordahl/replace-workflow-deployment@v1.0.0
         with:
           ref: ${{inputs.release_tag}}
           description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
