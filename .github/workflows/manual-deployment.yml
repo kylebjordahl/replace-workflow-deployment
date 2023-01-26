@@ -1,0 +1,33 @@
+name: Deploy to Env
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      release_tag:
+        description: the tag of the release to deploy
+        type: string
+        default: latestRelease
+        required: true
+          
+      environment:
+        description: the environment to deploy to
+        type: choice
+        options:
+          - production-ohm
+          - beta-ohm
+        required: true
+
+
+jobs:
+  do_deploy:
+    environment: ${{ inputs.environment  }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Do deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}"
+
+      - uses: ./
+        with:
+          ref: ${{inputs.release_tag}}
+          description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
+          environment: ${{ inputs.environment }}
