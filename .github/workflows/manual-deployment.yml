@@ -25,6 +25,7 @@ jobs:
     steps:
       - run: echo "Do deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}"
 
+      - uses: actions/checkout
       - uses: ./
         with:
           ref: ${{inputs.release_tag}}
