@@ -57,6 +57,7 @@ function run() {
                 ref: currentRunRef,
                 environment: inputs.environment,
             });
+            deployments.data.forEach(d => core.debug(`Found deployment [${d.id}(${d.updated_at}): ${d.description}]`));
             const replacedDeployment = deployments.data.slice(0, 1).shift();
             if (!replacedDeployment) {
                 throw Error('Could not find a deployment to replace');
