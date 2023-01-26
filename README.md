@@ -2,104 +2,62 @@
   <a href="https://github.com/actions/typescript-action/actions"><img alt="typescript-action status" src="https://github.com/actions/typescript-action/workflows/build-test/badge.svg"></a>
 </p>
 
-# Create a JavaScript Action using TypeScript
+# Replace Workflow Deployment Action
 
-Use this template to bootstrap the creation of a TypeScript action.:rocket:
+## The problem
 
-This template includes compilation support, tests, a validation workflow, publishing, and versioning guidance.  
+If you use GitHub Actions to deploy in a non-continuous way (i.e. you trigger a deployment workflow manually) and you utilize
+GitHub's Deployment Environments feature, you will likely end up that the `ref` associated with the resulting `deployment` object
+in GitHub's data model points to the state of `main` at the time your workflow ran, regardless of the ref that was actually deployed
+(which is frequently a release tag).
 
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
+## The solution
 
-## Create an action from this template
+This action looks for the most recent release which was created for the SHA which triggered the current workflow, mixes it's data with data that is input to the action, and creates a new deployment with the updated data. The old release is then marked inactive and subsequently deleted, preventing duplication of deployments.
 
-Click the `Use this Template` and provide the new repo details for your action
+## Example workflow
 
-## Code in Main
+The workflow below is built to allow manual triggering while providing a release tag and an environment name
 
-> First, you'll need to have a reasonably modern version of `node` handy. This won't work with versions older than 9, for instance.
-
-Install the dependencies  
-```bash
-$ npm install
 ```
+name: Manually Deploy to Env
 
-Build the typescript and package it for distribution
-```bash
-$ npm run build && npm run package
+on:
+  workflow_dispatch:
+    inputs:
+      # you probably want to validate this input somewhere!
+      release_tag:
+        description: the tag of the release to deploy
+        type: string
+        required: true
+
+      environment:
+        description: the environment to deploy to
+        type: choice
+        options:
+          - production
+        required: true
+
+
+jobs:
+  # Do your deployment as appropriate, setting the environment so that a deployment is created
+  do_deploy:
+    environment: ${{ inputs.environment  }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Do deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}"
+
+  # run this action _in a dependent job_ so that it can find the newly created deployment from the previous job
+  clean_up_deploy:
+    runs-on: ubuntu-latest
+    needs: [do_deploy]
+    steps:
+
+      # be sure to replace with whatever version you'd like to pin to
+      - uses: kylebjordahl@replace-workflow-deployment@v1.0.0
+        with:
+          ref: ${{inputs.release_tag}}
+          description: Deployment of ${{inputs.release_tag}} to ${{ inputs.environment }}
+          environment: ${{ inputs.environment }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-Run the tests :heavy_check_mark:  
-```bash
-$ npm test
-
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-
-...
-```
-
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-import * as core from '@actions/core';
-...
-
-async function run() {
-  try { 
-      ...
-  } 
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
-
-## Publish to a distribution branch
-
-Actions are run from GitHub repos so we will checkin the packed dist folder. 
-
-Then run [ncc](https://github.com/zeit/ncc) and push the results:
-```bash
-$ npm run package
-$ git add dist
-$ git commit -a -m "prod dependencies"
-$ git push origin releases/v1
-```
-
-Note: We recommend using the `--license` option for ncc, which will create a license file for all of the production node modules used in your project.
-
-Your action is now published! :rocket: 
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-
-## Validate
-
-You can now validate the action by referencing `./` in a workflow in your repo (see [test.yml](.github/workflows/test.yml))
-
-```yaml
-uses: ./
-with:
-  milliseconds: 1000
-```
-
-See the [actions tab](https://github.com/actions/typescript-action/actions) for runs of this action! :rocket:
-
-## Usage:
-
-After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) to reference the stable and latest V1 action
