@@ -84,6 +84,8 @@ function run() {
                 description: inputs.description,
                 environment: replacedDeployment.environment,
                 auto_merge: false,
+                // because we are replacing an existing deployment, we don't care about status checks
+                required_contexts: [],
             });
             if (newDeploymentResponse.status !== 201) {
                 core.debug(`Create new deployment returned ${newDeploymentResponse.status}: ${newDeploymentResponse.data}`);
