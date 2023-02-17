@@ -30,11 +30,11 @@ export async function run(): Promise<void> {
       ),
     )
 
-    const replacementsToDeploy = deployments.data.filter(
-      d =>
-        // only ones from github actions
-        d.performed_via_github_app?.slug === 'github-actions',
-    )
+    // const deploymentsToReplace = deployments.data.filter(
+    //   d =>
+    //     // only ones from github actions
+    //     d.performed_via_github_app?.slug === 'github-actions',
+    // )
     const replacedDeployment = deployments.data.slice(0, 1).shift()
 
     if (!replacedDeployment) {
