@@ -59,6 +59,11 @@ function run() {
             });
             core.debug(`Fetched ${deployments.data.length} deployments`);
             deployments.data.forEach(d => core.debug(`Found deployment [${d.id}(${d.updated_at}): ${d.description}]`));
+            // const deploymentsToReplace = deployments.data.filter(
+            //   d =>
+            //     // only ones from github actions
+            //     d.performed_via_github_app?.slug === 'github-actions',
+            // )
             const replacedDeployment = deployments.data.slice(0, 1).shift();
             if (!replacedDeployment) {
                 throw Error('Could not find a deployment to replace');
@@ -130,7 +135,14 @@ function run() {
     });
 }
 exports.run = run;
-run();
+switch (process.argv[2]) {
+    case '--post': {
+        run();
+        break;
+    }
+    default:
+        run();
+}
 
 
 /***/ }),
