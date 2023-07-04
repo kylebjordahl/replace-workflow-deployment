@@ -40,7 +40,6 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const luxon_1 = __nccwpck_require__(8811);
 function run() {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const inputs = {
@@ -59,74 +58,102 @@ function run() {
             });
             core.debug(`Fetched ${deployments.data.length} deployments`);
             deployments.data.forEach(d => core.debug(`Found deployment [${d.id}(${d.updated_at}): ${d.description}]`));
-            // const deploymentsToReplace = deployments.data.filter(
-            //   d =>
-            //     // only ones from github actions
-            //     d.performed_via_github_app?.slug === 'github-actions',
-            // )
-            const replacedDeployment = deployments.data.slice(0, 1).shift();
-            if (!replacedDeployment) {
-                throw Error('Could not find a deployment to replace');
+            const deploymentsToReplace = deployments.data.filter(d => { var _a; 
+            // only ones from github actions
+            return ((_a = d.performed_via_github_app) === null || _a === void 0 ? void 0 : _a.slug) === 'github-actions'; });
+            if (!deploymentsToReplace || deploymentsToReplace.length === 0) {
+                throw Error('Could not find any deployments to replace');
             }
-            const replacedDeploymentStatusesResult = yield octo.rest.repos.listDeploymentStatuses({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                deployment_id: replacedDeployment.id,
-            });
-            const replacedDeploymentStatuses = replacedDeploymentStatusesResult.data;
-            replacedDeploymentStatuses.sort((a, b) => luxon_1.DateTime.fromISO(b.updated_at)
-                .diff(luxon_1.DateTime.fromISO(a.updated_at))
-                .toMillis());
-            const latestReplacedDeploymentStatus = replacedDeploymentStatuses.shift();
-            core.info(`Replacing deployment ${replacedDeployment.id}: ${replacedDeployment.description}`);
+            const replacements = yield Promise.all(deploymentsToReplace.map((replacedDeployment) => __awaiter(this, void 0, void 0, function* () {
+                const replacedDeploymentStatusesResult = yield octo.rest.repos.listDeploymentStatuses({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    deployment_id: replacedDeployment.id,
+                });
+                const replacedDeploymentStatuses = replacedDeploymentStatusesResult.data;
+                replacedDeploymentStatuses.sort((a, b) => luxon_1.DateTime.fromISO(b.updated_at)
+                    .diff(luxon_1.DateTime.fromISO(a.updated_at))
+                    .toMillis());
+                const latestReplacedDeploymentStatus = replacedDeploymentStatuses.shift();
+                core.debug(`Replacing deployment ${replacedDeployment.id}: ${replacedDeployment.description}`);
+                return {
+                    latestReplacedDeploymentStatus,
+                    replacedDeployment,
+                };
+            })));
+            core.info(`Replacing ${replacements.length} deployments`);
             // create a new deployment for the target environment
             // https://github.com/kylebjordahl/replace-workflow-deployment/actions/runs/4012266800/jobs/6890573893
             const workflowUrl = `${github.context.serverUrl}/${github.context.repo.owner}/${github.context.repo.repo}/runs/${github.context.runId}`;
-            const newDeploymentResponse = yield octo.rest.repos.createDeployment({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                ref: inputs.ref,
-                description: inputs.description,
-                environment: replacedDeployment.environment,
-                auto_merge: false,
-                // because we are replacing an existing deployment, we don't care about status checks
-                required_contexts: [],
-            });
-            if (newDeploymentResponse.status !== 201) {
-                core.debug(`Create new deployment returned ${newDeploymentResponse.status}: ${newDeploymentResponse.data}`);
-                throw Error('Failed to create a new deployment');
-            }
-            const newDeployment = newDeploymentResponse.data;
-            core.setOutput('deployment_id', newDeployment.id);
-            const newDeploymentStatusUpdateResponse = yield octo.rest.repos.createDeploymentStatus({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                deployment_id: newDeployment.id,
-                state: (_a = latestReplacedDeploymentStatus === null || latestReplacedDeploymentStatus === void 0 ? void 0 : latestReplacedDeploymentStatus.state) !== null && _a !== void 0 ? _a : 'success',
-                log_url: workflowUrl,
-                description: inputs.description,
-                auto_inactive: true,
-            });
-            if (newDeploymentStatusUpdateResponse.status !== 201) {
-                throw Error('Failed to set new deployment status');
-            }
-            const replacedDeploymentStatusUpdateResponse = yield octo.rest.repos.createDeploymentStatus({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                deployment_id: replacedDeployment.id,
-                state: 'inactive',
-            });
-            if (replacedDeploymentStatusUpdateResponse.status !== 201) {
-                throw Error('Failed to set replaced deployment status');
-            }
-            const deleteOldDeploymentResult = yield octo.rest.repos.deleteDeployment({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                deployment_id: replacedDeployment.id,
-            });
-            if (deleteOldDeploymentResult.status !== 204) {
-                throw Error(`Failed to delete old deployment [${replacedDeployment.id}]`);
-            }
+            const uniqueEnvironments = replacements.reduce((unique, replacement) => {
+                var _a;
+                const key = [replacement.replacedDeployment.environment].join('.');
+                if (!unique.has(key)) {
+                    unique.set(key, []);
+                }
+                (_a = unique.get(key)) === null || _a === void 0 ? void 0 : _a.push(replacement);
+                return unique;
+            }, new Map());
+            yield Promise.all([...uniqueEnvironments.values()].map((replacementsForEnv) => __awaiter(this, void 0, void 0, function* () {
+                var _a;
+                if (!replacementsForEnv.length) {
+                    return;
+                }
+                const { replacedDeployment, latestReplacedDeploymentStatus } = replacementsForEnv[0];
+                const newDeploymentResponse = yield octo.rest.repos.createDeployment({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    ref: inputs.ref,
+                    description: inputs.description,
+                    environment: replacedDeployment.environment,
+                    auto_merge: false,
+                    // because we are replacing an existing deployment, we don't care about status checks
+                    required_contexts: [],
+                });
+                if (newDeploymentResponse.status !== 201) {
+                    core.debug(`Create new deployment returned ${newDeploymentResponse.status}: ${newDeploymentResponse.data}`);
+                    throw Error('Failed to create a new deployment');
+                }
+                const newDeployment = newDeploymentResponse.data;
+                // we no longer supply the deploymentId in singular, so add the env name
+                core.setOutput(`deploymentId_${newDeployment.environment.replace(' ', '_')}`, newDeployment.id);
+                const newDeploymentStatusUpdateResponse = yield octo.rest.repos.createDeploymentStatus({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    deployment_id: newDeployment.id,
+                    state: (_a = latestReplacedDeploymentStatus === null || latestReplacedDeploymentStatus === void 0 ? void 0 : latestReplacedDeploymentStatus.state) !== null && _a !== void 0 ? _a : 'success',
+                    log_url: workflowUrl,
+                    description: inputs.description,
+                    auto_inactive: true,
+                });
+                if (newDeploymentStatusUpdateResponse.status !== 201) {
+                    throw Error('Failed to set new deployment status');
+                }
+                const replacedDeploymentStatusUpdateResponse = yield octo.rest.repos.createDeploymentStatus({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    deployment_id: replacedDeployment.id,
+                    state: 'inactive',
+                });
+                if (replacedDeploymentStatusUpdateResponse.status !== 201) {
+                    throw Error('Failed to set replaced deployment status');
+                }
+                // delete all replaced deployments
+                const deleteResults = yield Promise.allSettled(replacementsForEnv.map(({ replacedDeployment }) => __awaiter(this, void 0, void 0, function* () {
+                    const deleteOldDeploymentResult = yield octo.rest.repos.deleteDeployment({
+                        owner: github.context.repo.owner,
+                        repo: github.context.repo.repo,
+                        deployment_id: replacedDeployment.id,
+                    });
+                    if (deleteOldDeploymentResult.status !== 204) {
+                        const err = Error(`Failed to delete old deployment [${replacedDeployment.id}]`);
+                        core.error(err.message);
+                        throw err;
+                    }
+                })));
+                if (deleteResults.some(r => r.status === 'rejected')) {
+                }
+            })));
         }
         catch (error) {
             if (error instanceof Error)
