@@ -17,6 +17,10 @@ on:
 
   push:
 
+permissions:
+  deployments: write
+  statuses: write
+
 jobs:
   do_deploy_a:
     environment: ${{ inputs.environment || format('branch_{0}', github.ref_name)  }}
