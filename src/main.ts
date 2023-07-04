@@ -86,9 +86,9 @@ export async function run(): Promise<void> {
 
       unique.get(key)?.push(replacement)
       return unique
-    }, new Map<string, (typeof replacements)[0][]>())
+    }, new Map<string, typeof replacements[0][]>())
 
-    await Promise.all(
+    const replacements = await Promise.all(
       [...uniqueEnvironments.values()].map(async replacementsForEnv => {
         if (!replacementsForEnv.length) {
           return
@@ -169,9 +169,15 @@ export async function run(): Promise<void> {
           }),
         )
         if (deleteResults.some(r => r.status === 'rejected')) {
+          core.setFailed(`Error while deleting some deployments`)
+        }
+        return {
+          deleteResults,
+          newDeployment,
         }
       }),
     )
+    core.info(`Created ${replacements.length} new deployments`)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
